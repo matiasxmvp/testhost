@@ -1,0 +1,65 @@
+{% load static tailwind_tags %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dara</title>
+    {% tailwind_css %}
+  </head>
+  <body>
+    {% include 'header.html' %}
+    <div class="min-h-screen">
+      <nav class="w-full p-4 bg-white">
+          <ul class="flex flex-col md:flex-row items-center justify-center space-y-2 md:space-y-0 md:space-x-4 text-gray-800">
+              <li class="px-4 py-2 bg-gray-200 rounded-md cursor-pointer" onclick="showContent('dara')">Dara</li>
+              <li class="px-4 py-2 rounded-md cursor-pointer" onclick="showContent('financiamiento')">Financiamiento</li>
+              <li class="px-4 py-2 rounded-md cursor-pointer" onclick="showContent('coordinaciondocente')">Coordinación Docente</li>
+              <li class="px-4 py-2 rounded-md cursor-pointer" onclick="showContent('asuntosestudiantiles')">Asuntos Estudiantiles</li>
+              <li class="px-4 py-2 rounded-md cursor-pointer" onclick="showContent('idi')">I+D+I</li>
+              <li class="px-4 py-2 rounded-md cursor-pointer" onclick="showContent('subirdocumentos')">Subir Documentos</li>
+          </ul>
+      </nav>
+      <div class="w-full p-4">
+          <div id="dara" class="content"><iframe class="w-full h-96" src="{% url 'docsdara' %}"></iframe></div>
+          <div id="financiamiento" class="content hidden"><iframe class="w-full h-96" src="{% url 'docsfinanciamiento' %}"></iframe></div>
+          <div id="coordinaciondocente" class="content hidden"><iframe class="w-full h-96" src="{% url 'docscoordinaciondocente' %}"></iframe></div>
+          <div id="asuntosestudiantiles" class="content hidden"><iframe class="w-full h-96" src="{% url 'docsasuntosestudiantiles' %}"></iframe></div>
+          <div id="idi" class="content hidden"><iframe class="w-full h-96" src="{% url 'docsidi' %}"></iframe></div>
+          <div id="subirdocumentos" class="content hidden"><iframe class="w-full h-96" src="{% url 'subirdocumentos' %}"></iframe></div>
+      </div>
+  </div>
+  
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>  
+  <script>
+    function showContent(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.add('hidden'));
+      document.querySelector(`#${id}`).classList.remove('hidden');
+      document.querySelectorAll('nav li').forEach(el => el.classList.remove('bg-gray-200'));
+      document.querySelector(`[onclick="showContent('${id}')"]`).classList.add('bg-gray-200');
+    }
+  
+    // No seleccionar ninguna pestaña al cargar la página
+    window.onload = function() {
+      document.querySelectorAll('.content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('nav li').forEach(el => el.classList.remove('bg-gray-200'));
+    };
+  </script>
+  <script>
+    // Función para recargar iframes
+    function reloadIframes() {
+        $("iframe").each(function() {
+            this.contentWindow.location.reload(true);
+        });
+    }
+
+    // Event listener para el mensaje 'reloadIframes'
+    window.addEventListener('message', function(event) {
+        if (event.data === 'reloadIframes') {
+            reloadIframes();
+        }
+    }, false);
+</script>
+
+  </body>
+</html>

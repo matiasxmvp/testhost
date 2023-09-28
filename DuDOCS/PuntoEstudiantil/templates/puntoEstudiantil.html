@@ -1,0 +1,45 @@
+{% load static tailwind_tags %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Punto Estudiantil</title>
+    {% tailwind_css %}
+  </head>
+  <body>
+    {% include 'header.html' %}
+    <div class="min-h-screen">
+      <nav class="w-full p-4 bg-white">
+          <ul class="flex flex-col md:flex-row items-center justify-center space-y-2 md:space-y-0 md:space-x-4 text-gray-800">
+              <!-- <li class="px-4 py-2 bg-gray-200 rounded-md cursor-pointer" onclick="showContent('inventario')">Inventario</li> -->
+              {% if request.user.userprofile.rol == 'Ayudante' %}
+                <li class="px-4 py-2 bg-gray-200 rounded-md cursor-not-allowed" style="pointer-events: none;">Inventario</li>
+              {% else %}
+                <li class="px-4 py-2 rounded-md cursor-pointer" onclick="showContent('inventario')">Inventario</li>
+              {% endif %}
+              <li class="px-4 py-2 rounded-md cursor-pointer" onclick="showContent('evento')">Evento</li>
+          </ul>
+      </nav>
+      <div class="w-full p-4">
+          <div id="inventario" class="content"><iframe class="w-full h-96" src="{% url 'inventario' %}"></iframe></div>
+          <div id="evento" class="content hidden"><iframe class="w-full h-96" src="{% url 'evento' %}"></iframe></div>
+      </div>
+  </div>
+  <script>
+    function showContent(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.add('hidden'));
+      document.querySelector(`#${id}`).classList.remove('hidden');
+      document.querySelectorAll('nav li').forEach(el => el.classList.remove('bg-gray-200'));
+      document.querySelector(`[onclick="showContent('${id}')"]`).classList.add('bg-gray-200');
+    }
+  
+    // No seleccionar ninguna pestaña al cargar la página
+    window.onload = function() {
+      document.querySelectorAll('.content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('nav li').forEach(el => el.classList.remove('bg-gray-200'));
+    };
+  </script>
+    
+  </body>
+</html>

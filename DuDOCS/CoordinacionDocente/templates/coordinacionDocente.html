@@ -8,46 +8,78 @@
     {% tailwind_css %}
 </head>
 <body>
-    {% include 'header.html' %}
-    <div
-    class="text-sm font-medium text-center text-gray-500 border-b border-gray-200"
-  >
-    <ul class="flex flex-wrap -mb-px">
-      <li class="mr-2">
-        <a
-          href="#"
-          class="inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300"
-        >
-          Home
-        </a>
-      </li>
-      <li class="mr-2">
-        <a
-          href="#"
-          class="inline-block p-4 text-purple-600 border-b-2 border-purple-600 rounded-t-lg active"
-          aria-current="page"
-        >
-          Calendar
-        </a>
-      </li>
-      <li class="mr-2">
-        <a
-          href="#"
-          class="inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300"
-        >
-          Results
-        </a>
-      </li>
-      <li class="mr-2">
-        <a
-          href="#"
-          class="inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300"
-        >
-          Live
-        </a>
-      </li>
-    </ul>
-  </div>
+  <section class="layout w-full h-screen grid grid-cols-[auto,1fr] gap-2">
+    <!-- menú lateral -->
+    <div class="sidebar box w-70 h-screen flex-shrink-0" style="background-color: #1C1B1F;">
+      <nav class="w-full p-4 flex flex-col items-start space-y-2">
+        <a href="{% url 'inicio' %}"><img class="w-40 h-47 top-0 left-0 object-cover flex-shrink-0" src="/theme/static/images/duoclogin.png" alt="Logo DUOC UC" /></a>
+        <p class="text-white px-4">Bienvenido/a, {{ request.user.first_name }}</p>
+        <br>
+        <ul class="text-gray-800 list-none">
+          <li class="hover:bg-yellow-500 px-4 py-2  rounded-md cursor-pointer text-white" onclick="showContent('horario')">Ver Horario</li>
+          <li class="hover:bg-yellow-500 px-4 py-2  rounded-md cursor-pointer text-white" onclick="showContent('subirhorario')">Subir Horario</li>
+          <li class="hover:bg-yellow-500 px-4 py-2  rounded-md cursor-pointer text-white" onclick="showContent('salas')">Salas</li>
+        </ul>
+        <div style="margin-top: auto;" class="absolute bottom-2">
+          <a href="{% url 'inicio' %}" class="mb-2 hover:text-yellow-500 px-4 text-white">Inicio</a>
+          <br>
+          <a href="{% url 'cerrarSesion' %}" class="mb-2 hover:text-yellow-500 px-4 text-white">Cerrar Sesión</a>
+        </div>
+      </nav>
+    </div>
+    <!-- contenido -->
+    <div class="body w-full p-4 flex-1">
+      <div id="default-content" class="content text-center items-center w-full h-full flex-1 flex justify-center">
+        <p>Selecciona una opción del menú lateral para ver el contenido.</p>
+      </div>
+      <div id="horario" class="content hidden flex-1">
+        <iframe class="w-full h-full" src="{% url 'horario' %}" style="width: 100%; height: calc(100vh - 2rem);"></iframe>
+      </div>
+      <div id="subirhorario" class="content hidden flex-1">
+        <iframe class="w-full h-full" src="{% url 'subir_horario' %}" style="width: 100%; height: calc(100vh - 2rem);"></iframe>
+      </div>
+      <div id="salas" class="content hidden flex-1">
+        <iframe class="w-full h-full" src="{% url 'salas' %}" style="width: 100%; height: calc(100vh - 2rem);"></iframe>
+      </div>
+    </div>
+  </section>
+   
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>  
+<script>
+  function showContent(id) {
+    document.querySelectorAll('.content').forEach(el => el.classList.add('hidden'));
+    document.querySelector(`#${id}`).classList.remove('hidden');
+    document.querySelectorAll('nav li').forEach(el => el.classList.remove('bg-yellow-500'));
+    document.querySelectorAll('nav li').forEach(el => el.classList.remove('hover:bg-yellow-500'));
+    document.querySelector(`[onclick="showContent('${id}')"]`).classList.add('bg-yellow-500');
+  }
+
+  // No seleccionar ninguna pestaña al cargar la página
+  window.onload = function() {
+    document.querySelectorAll('nav li').forEach(el => el.classList.remove('bg-yellow-500'));
+    document.querySelectorAll('.content').forEach(el => {
+      if (el.id !== 'default-content') {
+        el.classList.add('hidden');
+      }
+    });
+  };
+</script>
+
+<script>
+  // Función para recargar iframes
+  function reloadIframes() {
+      $("iframe").each(function() {
+          this.contentWindow.location.reload(true);
+      });
+  }
+
+  // Event listener para el mensaje 'reloadIframes'
+  window.addEventListener('message', function(event) {
+      if (event.data === 'reloadIframes') {
+          reloadIframes();
+      }
+  }, false);
+</script>
 
 </body>
 </html>

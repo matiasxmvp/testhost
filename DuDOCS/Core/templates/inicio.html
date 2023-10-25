@@ -11,7 +11,7 @@
   <body style="background-color: #1C1B1F;">
     <div>
       {% include 'header.html' %} {% if request.user.is_authenticated %}
-      <p class="text-white text-center left-3">Bienvenido {{ request.user }}</p>
+      <p class="text-white text-center left-3">Bienvenido/a, {{ request.user.first_name }}</p>
     {% endif %}
     </div>
     

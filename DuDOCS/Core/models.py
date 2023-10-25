@@ -1,7 +1,7 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import User
-from django.contrib.auth.models import AbstractUser, PermissionsMixin, BaseUserManager
+import base64
 
 # Modelo para Sede
 class Sede(models.Model):
@@ -30,14 +30,14 @@ class UserProfile(models.Model):
 # Model Carrera
 class Carrera(models.Model):
     nombre = models.CharField(max_length=255, unique=True, db_index=True)
-
+    sede = models.ForeignKey(Sede, on_delete=models.CASCADE)
     def __str__(self):
         return self.nombre
     
 # Modelo Malla Curricular
 class MallaCurricular(models.Model):
     nombre = models.CharField(max_length=255, unique=True, db_index=True)
-
+    sede = models.ForeignKey(Sede, on_delete=models.CASCADE)
     def __str__(self):
         return self.nombre
 
@@ -79,37 +79,42 @@ class Edificio(models.Model):
 
 # Modelo para Salas
 class Sala(models.Model):
-    TIPO_CHOICES = [
-        ('Teatro', 'Teatro'),
-        ('Computación', 'Computación'),
-        ('Normal', 'Normal'),
-    ]
+    # TIPO_CHOICES = [
+    #     ('Teatro', 'Teatro'),
+    #     ('Computación', 'Computación'),
+    #     ('Normal', 'Normal'),
+    # ]
     nombre = models.CharField(max_length=255, unique=True, db_index=True,blank=True, null=True)
     capacidad = models.IntegerField()
-    tipo = models.CharField(choices=TIPO_CHOICES, max_length=255)
-    edificio = models.ForeignKey(Edificio, on_delete=models.CASCADE)
+    sede = models.ForeignKey(Sede, on_delete=models.CASCADE)
+    # tipo = models.CharField(choices=TIPO_CHOICES, max_length=255)
+    # edificio = models.ForeignKey(Edificio, on_delete=models.CASCADE)
 
     def __str__(self):
         return self.nombre
 
 # Modelo para Horario de Sala Semestral
 class HorarioSala(models.Model):
-    fecha = models.DateField(db_index=True)
+    fecha = models.DateField(db_index=True, blank=True, null=True)
+    semestre = models.CharField(max_length=1, db_index=True)
     hora_inicio = models.TimeField(db_index=True,blank=True, null=True)
     hora_fin = models.TimeField(db_index=True,blank=True, null=True)
-    semana = models.IntegerField(db_index=True)
-    sala = models.ForeignKey(Sala, on_delete=models.CASCADE, db_index=True)
-    siglaAsignatura = models.CharField(max_length=255,blank=True, null=True)
-    seccion = models.CharField(max_length=10,blank=True, null=True)
-    email = models.EmailField(blank=True, null=True)
-    nombreDocente = models.CharField(max_length=255,blank=True, null=True)
+    sala = models.ForeignKey(Sala, on_delete=models.CASCADE, db_index=True,  blank=True, null=True)
+    sigla_seccion = models.CharField(max_length=255)
+    asignatura = models.CharField(max_length=255)
+    tipo_hora = models.CharField(max_length=8, db_index=True)
 
-# Modelo para Reservas
-class Reserva(models.Model):
-    horario = models.ForeignKey(HorarioSala, on_delete=models.CASCADE, db_index=True)
-    email = models.EmailField()
-    nombre = models.CharField(max_length=255, db_index=True)
-    fecha = models.DateField()
+# Modelo para Horarios irregulares, y reservas afectadas
+class HorarioSalaExcepcional(models.Model):
+    fecha = models.DateField(db_index=True, blank=True, null=True)
+    semestre = models.CharField(max_length=1, db_index=True)
+    descripcion = models.TextField(blank=True, null=True)
+    hora_inicio = models.TimeField(db_index=True,blank=True, null=True)
+    hora_fin = models.TimeField(db_index=True,blank=True, null=True)
+    sala = models.ForeignKey(Sala, on_delete=models.CASCADE, db_index=True,  blank=True, null=True)
+    sigla_seccion = models.CharField(max_length=255)
+    asignatura = models.CharField(max_length=255)
+    tipo_hora = models.CharField(max_length=8, db_index=True)
 
 # Modelo para TNE (Tarjeta Nacional Estudiantil)
 class TNE(models.Model):
@@ -148,9 +153,10 @@ class AsistenciaEvento(models.Model):
 # Modelo para Producto
 class Producto(models.Model):
     nombre = models.CharField(max_length=255, db_index=True)
-    cantidad = models.IntegerField()
+    cantidad_total = models.IntegerField()
+    cantidad_disponible = models.IntegerField()
     descripcion = models.TextField()
-    imagen = models.BinaryField()
+    imagen = models.ImageField(upload_to='productos/')
     sede = models.ForeignKey(Sede, on_delete=models.CASCADE)
 
     def __str__(self):
@@ -160,7 +166,9 @@ class Producto(models.Model):
 class PrestamoProducto(models.Model):
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
     email = models.EmailField(db_index=True)
+    rut = models.CharField(max_length=12, db_index=True)
+    cantidad = models.IntegerField()
     fecha_prestamo = models.DateTimeField()
     fecha_limite = models.DateTimeField()
-    descripcion = models.TextField()
+    nombre = models.CharField(max_length=30, db_index=True)
     estado = models.CharField(max_length=30, db_index=True,blank=True, null=True) 

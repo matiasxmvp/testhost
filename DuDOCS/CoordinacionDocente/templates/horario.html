@@ -1,0 +1,391 @@
+{% load static tailwind_tags templatetags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Horarios
+    </title>
+    {% tailwind_css %}
+</head>
+<body>
+    <!-- Contenido de la página -->
+    <div class="flex">
+        <div class="w-1/10 p-4" style="width: 15%;"">
+            <!-- Filtro por nombre -->
+            <label for="busqueda-sala" class="block mb-2">Buscar Sala:</label> 
+            <input type="text" id="busqueda-sala" name="busqueda-sala" placeholder="Buscar sala" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm">
+    
+            <!-- Filtro por capacidad -->
+            <label for="capacidad-select" class="block mb-2">Capacidad:</label>
+            <select id="capacidad-select" name="capacidad-select" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm">
+                <option value="" selected>Capacidad</option>
+                {% for capacidad in capacidades %}
+                    <option value="{{ capacidad }}">{{ capacidad }}</option>
+                {% endfor %}
+            </select>
+    
+            <!-- Listado de salas (abierto por defecto) -->
+            <label for="sala-select">Sala:</label>
+            <select id="sala-select" name="sala-select" size="10" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm">
+                <option value="" selected disabled>Sala</option>
+                {% for sala in salas %}
+                    <option value="{{ sala.nombre }}" data-capacidad="{{ sala.capacidad }}">{{ sala.nombre }}</option>
+                {% endfor %}
+            </select>
+
+            <!-- Filtro por semana/fecha -->
+            <div>
+                <label  id="fecha-select-label" for="fecha-select" class="block mb-2 mt-2" style="display: none;">Fecha:</label>
+                <input type="date" id="fecha-select" name="fecha-select" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm" style="display: none;">
+            </div>
+
+            <!-- Reserva de modulos -->
+            <div>
+                <button id="iniciar-reserva" class="mt-2 iniciar-reserva bg-blue hover:bg-yellow-500 text-black font-bold py-2 px-4 rounded"" onclick="iniciarReserva()" style="display: none;">Reservar Módulos</button>
+            </div>
+        </div>
+        <div class="w-9-10 p-4" style="width: 85%;"">
+            <div id="horario-container">
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal para crear reserva -->
+    <div id="crearReservaModal" class="fixed top-0 left-0 w-full h-full bg-opacity-50 flex items-center justify-center hidden" style="backdrop-filter: blur(6px);">
+        <div class="bg-white p-8 space-y-4 w-1/2 h-auto mx-auto my-20">
+            <h1 class="text-2xl mb-4 text-center">Reservar Módulo</h1>
+            <form action="" id="reservarForm" method="POST" class="grid grid-cols-1 gap-4">
+                {% csrf_token %}
+                <div class="flex">
+                    <div class="w-1/2 pr-4">
+                        <label for="fecha" class="block text-sm font-medium text-gray-700">Fecha:</label>
+                        <input type="date" id="fecha" name="fecha" required class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm" readonly>
+                        <label for="hora-inicio">Hora de Inicio:</label>
+                        <input type="time" id="hora-inicio" required readonly class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm">
+                        <label for="hora-fin">Hora de Fin:</label>
+                        <input type="time" id="hora-fin" required readonly class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm">
+                        <label for="sala">Sala:</label>
+                        <input type="text" id="sala" required readonly class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm">
+                    </div>
+                    <div class="w-1/2 pr-4 ml-4">
+                        <label for="asignatura">Asignatura:</label>
+                        <input type="text" id="asignatura" required  class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm">
+                        <label for="sigla-seccion">Sigla y Sección:</label>
+                        <input type="text" id="sigla-seccion" required  class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm">
+                        <label for="tipo-hora" class="block text-gray-700">Tipo Hora:</label>
+                        <select id="tipo-hora" name="tipo-hora" class="w-full py-2 px-3 border rounded focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500" required>
+                            <option value="" selected disabled>Seleccione tipo de hora</option>
+                            <option value="Normal">Normal</option>
+                            <option value="Reserva">Reserva</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- Botones de envío y cierre -->
+                <div class="col-span-full flex justify-between items-center mb-4">
+                    <input type="submit" id="saveButton" class="bg-black hover:bg-yellow-500 text-white font-bold py-2 px-4 rounded" value="Reservar">
+                    <!-- Botón para cerrar el modal -->
+                    <button id="closeCrearReservaModal" onclick="cerrarModal()" type="button" class="bg-black hover:bg-yellow-500 text-white font-bold py-2 px-4 rounded">Cerrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Script obtención y carga de horario seleccionado -->
+    <script>
+        const selectSala = document.getElementById('sala-select');
+        const horarioContainer = document.getElementById('horario-container');
+        const selectFecha = document.getElementById('fecha-select');
+        const labelFecha = document.getElementById('fecha-select-label');
+        const botonReserva = document.getElementById('iniciar-reserva');
+        selectSala.addEventListener('change', (event) => {
+            event.preventDefault();
+            const salaNombre = selectSala.options[selectSala.selectedIndex].value;
+            if (salaNombre) {
+                selectFecha.style.display = 'block'; // Muestra el selector de fecha
+                labelFecha.style.display = 'block';
+                botonReserva.style.display = 'block';
+                const fecha = selectFecha.value;
+                obtenerHorario(salaNombre, fecha);
+            } else {
+                selectFecha.style.display = 'none'; // Oculta el selector de fecha
+                labelFecha.style.display = 'none';
+                botonReserva.style.display = 'none';
+            }
+        });
+        selectFecha.addEventListener('change', (event) => {
+            event.preventDefault();
+            const salaNombre = selectSala.options[selectSala.selectedIndex].value;
+            const fecha = selectFecha.value;
+            obtenerHorario(salaNombre, fecha);
+        });
+        function obtenerHorario(salaNombre, fecha) {
+            fetch(`/obtener_horario/${salaNombre}/${fecha}/`)
+                .then(response => response.json())
+                .then(data => {
+                    construirTablaHorario(data);
+                });
+        }
+
+        function construirTablaHorario(data) {
+            // Accede a los datos de horarios desde la respuesta JSON
+            const horarios = data.horarios;
+
+            // Accede al contenedor de la tabla
+            const tableContainer = document.createElement('table');
+            tableContainer.classList.add('border', 'border-collapse', 'w-full');
+
+            // Agrega encabezados
+            const headerRow = document.createElement('tr');
+            const headers = ['Horario', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+            headers.forEach(headerText => {
+                const header = document.createElement('th');
+                header.classList.add('border', 'px-4', 'py-2', 'w-24', 'h-12');
+                header.textContent = headerText;
+                headerRow.appendChild(header);
+            });
+            tableContainer.appendChild(headerRow);
+            
+            // Construye la tabla de horarios
+            horarios.forEach(horario => {
+                const row = document.createElement('tr');
+                // Agrega hora de inicio y fin
+                const horarioCell = document.createElement('td');
+                horarioCell.classList.add('border', 'px-4', 'py-2', 'w-24', 'h-12');
+                horarioCell.textContent = `${horario.times[0].slice(0, 5)}\n a ${horario.times[1].slice(0, 5)}`;
+                row.appendChild(horarioCell);
+
+                // Agrega datos de asignaturas para cada día de la semana
+                for (let dia = 0; dia < 6; dia++) {  // Supongo que tienes datos para 6 días de la semana
+                    const asignaturas = horario.courses[dia] || []; // Si no hay asignaturas, muestra una celda vacía
+                    const cell = document.createElement('td');
+                    cell.classList.add('border', 'px-4', 'py-2', 'w-24', 'h-12');
+                    if (asignaturas.length > 0) {
+                        cell.textContent = asignaturas.join(', ');
+                    }
+                    if (asignaturas.length === 0) { // Check si el bloque está vacío
+                        cell.classList.add('reservable', `dia-${dia}`); // Agrega la clase reservable y dia-n a las celdas vacías
+                        cell.addEventListener('click', clickBloque);
+                    }
+                    row.appendChild(cell);
+                }
+
+                // Agrega la fila a la tabla
+                tableContainer.appendChild(row);
+            });
+
+            // Limpia el contenedor anterior y agrega la tabla construida
+            horarioContainer.innerHTML = '';
+            horarioContainer.appendChild(tableContainer);
+        }
+
+        // Agrega eventos de click a las celdas reservables
+        document.querySelectorAll('.reservable').forEach(celda => {
+            celda.addEventListener('click', clickBloque);
+        });
+    </script>
+
+    <!-- Script crear reserva -->
+    <script>
+        
+        const bloquesSeleccionados = {};
+        function clickBloque(e) {
+            const celda = e.target;
+            const dia = celda.classList[1]; // 'dia-n'
+
+            if (!bloquesSeleccionados[dia]) {
+                bloquesSeleccionados[dia] = [];
+            }
+
+            if (celda.classList.contains('seleccionado')) {
+                // si la celda ya está seleccionada, deselecciónala.
+                // si es el último bloque seleccionado para el día, eliminálo del arreglo de bloques seleccionados.
+                const idx = bloquesSeleccionados[dia].map(c => c.textContent).indexOf(celda.textContent);
+                if (idx > -1) bloquesSeleccionados[dia].splice(idx, 1);
+                celda.classList.remove('seleccionado');
+            } else {
+                // si la celda no está seleccionada, seleccionála.
+                // si es el próximo bloque consecutivo para el día, añádela al arreglo de bloques seleccionados.
+                const ultimoBloque = bloquesSeleccionados[dia][bloquesSeleccionados[dia].length - 1];
+                if (!ultimoBloque) {
+                    // si no hay bloques seleccionados ese día aún
+                    bloquesSeleccionados[dia].push(celda);
+                    celda.classList.add('seleccionado');
+                } else {
+                    const bloques = document.querySelectorAll(`.${dia}`);
+                    const idxUltimoBloque = Array.from(bloques).map(c => c.textContent).indexOf(ultimoBloque.textContent);
+                    const idxCeldaActual = Array.from(bloques).map(c => c.textContent).indexOf(celda.textContent);
+                    if (idxCeldaActual === idxUltimoBloque + 1) {
+                        // si el bloque actual es consecutivo al último bloque seleccionado
+                        bloquesSeleccionados[dia].push(celda);
+                        celda.classList.add('seleccionado');
+                    } else {
+                        alert('Por favor, selecciona bloques horario consecutivos');
+                    }
+                }
+            }
+        }
+
+        // Función para abrir el modal de crear reserva
+        function iniciarReserva() {
+            // Comprueba si se ha seleccionado al menos un bloque
+            const diasSeleccionados = Object.keys(bloquesSeleccionados);
+            if (diasSeleccionados.length > 0) {
+                    // Extrae el valor de la sala
+                    const sala = document.getElementById('sala-select').value;
+
+                    // Consigue la fecha base del selector de fechas
+                    let fechaBase = new Date(document.getElementById('fecha-select').value);
+                    
+                    // Encuentra la fecha correcta basada en la fecha base y el primer día seleccionado
+                    const dia = parseInt(diasSeleccionados[0].split('-')[1]); // 'dia-n' -> n
+                    fechaBase.setDate(fechaBase.getDate() + dia);
+                    
+                    // Asegúrate de que la fecha base esté en el formato correcto.
+                    const fecha = fechaBase.toISOString().split('T')[0];
+                    
+                    // Obtiene sólo bloques del primer día seleccionado
+                    const bloquesDelDia = bloquesSeleccionados[diasSeleccionados[0]];
+                    
+                    // Ordena los bloques por la hora de inicio
+                    bloquesDelDia.sort((a, b) => {
+                        return a.textContent.split(' a ')[0].localeCompare(b.textContent.split(' a ')[0]);
+                    });
+                    
+                    // Extrae las horas de inicio y fin del primer y último bloque seleccionado respectivamente.
+                    const horaInicio = bloquesDelDia[0].textContent.split(' a ')[0];
+                    const horaFin = bloquesDelDia[bloquesDelDia.length - 1].textContent.split(' a ')[1];
+
+                    // Completa el formulario del modal con los valores extraídos.
+                    document.getElementById('fecha').value = fecha;
+                    document.getElementById('hora-inicio').value = horaInicio;
+                    document.getElementById('hora-fin').value = horaFin;
+                    document.getElementById('sala').value = sala;
+                    
+                    // Abre el modal
+                    const modal = document.getElementById('crearReservaModal');
+                    modal.style.display = 'block';
+                } else {
+                    alert('Debes seleccionar al menos un bloque horario.');
+                    return;
+                }
+            }
+
+
+        // Función para cerrar el modal de crear reserva
+        function cerrarModal() {
+            // Ocultar el formulario modal
+            const modal = document.getElementById('crearReservaModal');
+            modal.style.display = 'none';
+            // Vaciar los campos del formulario
+            document.getElementById('reservarForm').reset();    
+        }
+        // Función para crear la reserva y enviar los datos al servidor
+        function crearReserva() {
+            // Verificar si el botón ya está en proceso de envío
+            const saveButton = document.getElementById('saveButton');
+            if (saveButton.getAttribute('data-processing') === 'true') {
+                return; // Evitar envío duplicado
+            }
+
+            // Establecer el atributo data-processing para evitar envíos duplicados
+            saveButton.setAttribute('data-processing', 'true');
+
+            // Obtener datos del formulario
+            const fecha = document.getElementById('fecha').value;
+            const horaInicio = document.getElementById('hora-inicio').value;
+            const horaFin = document.getElementById('hora-fin').value;
+            const sala = document.getElementById('sala').value;
+            const asignatura = document.getElementById('asignatura').value;
+            const siglaSeccion = document.getElementById('sigla-seccion').value;
+            const tipoHora = document.getElementById('tipo-hora').value;
+
+            // Crear un objeto con los datos a enviar al servidor
+            const reservaData = {
+                fecha: fecha,
+                horaInicio: horaInicio,
+                horaFin: horaFin,
+                sala: sala,
+                asignatura: asignatura,
+                siglaSeccion: siglaSeccion,
+                tipoHora: tipoHora
+            };
+
+            // Realizar una solicitud AJAX para enviar los datos al servidor
+            fetch('/crear_reserva/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(reservaData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Reserva creada con éxito');
+                } else if (data.error) {
+                    alert(data.error);
+                }
+                // Cerrar el formulario modal después de crear la reserva
+                cerrarModal();
+            })
+            .catch(error => {
+                console.error(error);
+                alert('Ha ocurrido un error al crear la reserva.');
+            })
+            .finally(() => {
+                // Restablecer el atributo data-processing y habilitar el botón
+                saveButton.setAttribute('data-processing', 'false');
+            });
+        }
+    </script>    
+
+    
+
+    <!-- Script filtros -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const inputBusqueda = document.getElementById('busqueda-sala');
+            const selectCapacidad = document.getElementById('capacidad-select');
+            const selectSala = document.getElementById('sala-select');
+            const options = selectSala.querySelectorAll('option');
+        
+            inputBusqueda.addEventListener('input', actualizarFiltro);
+            selectCapacidad.addEventListener('change', actualizarFiltro);
+        
+            // Función para aplicar el filtro
+            function actualizarFiltro() {
+                const textoBusqueda = inputBusqueda.value.toLowerCase();
+                const capacidadSeleccionada = selectCapacidad.value;
+        
+                // Itera sobre las opciones y muestra/oculta según coincidan la búsqueda y la capacidad
+                options.forEach((option) => {
+                    const salaNombre = option.value.toLowerCase();
+                    const salaCapacidad = option.getAttribute('data-capacidad');
+                    
+                    const coincideNombre = salaNombre.includes(textoBusqueda);
+                    const coincideCapacidad = capacidadSeleccionada === '' || salaCapacidad === capacidadSeleccionada;
+                    
+                    if (coincideNombre && coincideCapacidad) {
+                        option.style.display = 'block';  // Muestra la opción
+                    } else {
+                        option.style.display = 'none';   // Oculta la opción
+                    }
+                });
+            }
+        });
+    </script>
+
+    <!-- Script fecha actual     -->
+    <script>
+        window.onload = function() {
+            const fechaHoy = new Date();
+            const dia = ("0" + fechaHoy.getDate()).slice(-2);
+            const mes = ("0" + (fechaHoy.getMonth() + 1)).slice(-2);
+            const fechaHoyFormato = fechaHoy.getFullYear()+"-"+(mes)+"-"+(dia) ;
+            document.getElementById('fecha-select').value = fechaHoyFormato;
+        };
+    </script>
+
+</body>
+</html>

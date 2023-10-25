@@ -8,6 +8,8 @@ from django.http import JsonResponse
 from Core.models import Sede, UserProfile
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
+from django.core.exceptions import ValidationError
+
 
 def login(request):
     if request.user.is_authenticated:
@@ -41,10 +43,12 @@ def es_administrador(user):
 @login_required
 @user_passes_test(es_administrador, login_url='/')
 def gestionUsuarios(request):
+    # user_profile = UserProfile.objects.get(user=request.user)
+    # sede = user_profile.sede
+    # users = User.objects.filter(sede=sede)
     users = User.objects.all()
     return render(request, 'gestionUsuarios.html', {'users': users})
 
-@csrf_exempt
 def crear_usuario(request):
     if request.method == 'POST':
         sede = Sede.objects.get(nombre=request.user.userprofile.sede)
@@ -56,27 +60,32 @@ def crear_usuario(request):
         first_name = request.POST['first_name']
         last_name = request.POST['last_name']
         is_active = True
-        is_staff = 'is_staff' in request.POST
         is_superuser = 'is_superuser' in request.POST
-        if User.objects.filter(username=username).exists():
-            return JsonResponse({'error': 'El nombre de usuario ya existe'})
-        if User.objects.filter(email=user_email).exists():
-            return JsonResponse({'error': 'El email ya está siendo ocupado'})
-        if password1 != password2:
-            return JsonResponse({'error': 'Las contraseñas no coinciden'})
+        is_staff = False
 
-        user = User.objects.create_user(username=username, password=password1, email=user_email, first_name=first_name, last_name=last_name)
-        user.is_active = is_active
-        user.is_staff = is_staff
-        user.is_superuser = is_superuser
-        user.save()
+        # Use a try-except to manage errors
+        try:
+            if User.objects.filter(username=username).exists():
+                raise ValidationError('El nombre de usuario ya existe')
+            if User.objects.filter(email=user_email).exists():
+                raise ValidationError('El email ya está siendo ocupado')
+            if password1 != password2:
+                raise ValidationError('Las contraseñas no coinciden')
+            
+            user = User.objects.create_user(username=username, password=password1, email=user_email, first_name=first_name, last_name=last_name)
+            user.is_active = is_active
+            user.is_staff = is_staff
+            user.is_superuser = is_superuser
+            user.save()
 
-        # Crear UserProfile asociado al usuario creado
-        user_profile = UserProfile.objects.create(user=user, rol=rol, sede=sede)
+            # Crear UserProfile asociado al usuario creado
+            user_profile = UserProfile.objects.create(user=user, rol=rol, sede=sede)
+            
+            return JsonResponse({'success': 'Usuario creado con éxito'})
 
-        return JsonResponse({'success': 'Usuario creado con éxito'})
+        except ValidationError as e:
+            return JsonResponse({'error': str(e)}, status=400)
 
-@csrf_exempt
 def editar_usuario(request, user_id):
     user = get_object_or_404(User, id=user_id)
     if request.method == 'POST':
@@ -86,7 +95,7 @@ def editar_usuario(request, user_id):
         rol = request.POST['rol']
         last_name = request.POST['last_name']
         is_active = 'is_active' in request.POST
-        is_staff = 'is_staff' in request.POST
+        is_staff = False
         is_superuser = 'is_superuser' in request.POST
 
         username_changed = True
@@ -100,11 +109,13 @@ def editar_usuario(request, user_id):
         if username_changed:
             if User.objects.filter(username=username).exclude(id=user_id).exists():
                 return JsonResponse({'error': 'El nombre de usuario ya existe'})
+
             user.username = username
 
         if email_changed:
             if User.objects.filter(email=user_email).exclude(id=user_id).exists():
                 return JsonResponse({'error': 'El email ya está siendo usado por otro usuario'})
+
             user.email = user_email
 
         user.first_name = first_name
@@ -118,10 +129,10 @@ def editar_usuario(request, user_id):
         user.userprofile.rol = rol
         user.userprofile.save()
 
-    return JsonResponse({'success': 'Usuario editado con éxito'})
+        return JsonResponse({'success': 'Usuario editado con éxito'})
 
+    return JsonResponse({'error': 'Ocurrió un error al procesar la solicitud'}, status=400)
 
-@csrf_exempt
 def eliminar_usuario(request, user_id):
     user = get_object_or_404(User, id=user_id)
     user.delete()

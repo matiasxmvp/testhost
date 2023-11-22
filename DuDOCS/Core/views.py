@@ -12,8 +12,8 @@ scheduler_prestamos.start()
 # Eliminar reservas al completarse
 scheduler_reservas = BackgroundScheduler()
 dias = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat']
-horas = ['8:01', '8:41', '9:31', '10:11', '11:01', '11:41', '12:31', '13:11', '14:01', '14:41',
-         '15:31', '16:11', '17:01', '17:41', '18:21', '19:11', '19:51', '20:41', '21:21', '22:11']
+horas = ['8:40', '9:20', '10:10', '10:50', '11:40', '12:20', '13:10', '13:50', '14:40',
+         '15:20', '16:10', '16:50', '17:40', '18:20', '19:00', '19:50', '20:30', '21:20', '22:00', '22:50']
 for dia in dias:
     for hora in horas:
         trigger = CronTrigger(day_of_week=dia, hour=hora.split(':')[0], minute=hora.split(':')[1])
@@ -26,4 +26,5 @@ def inicio(request):
     return render(request,'inicio.html')
 
 def error(request, exception):
+    print(request)
     return render(request,'error.html', status=404)

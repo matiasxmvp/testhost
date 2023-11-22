@@ -2,6 +2,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import User
 import base64
+from django.utils import timezone
 
 # Modelo para Sede
 class Sede(models.Model):
@@ -116,17 +117,32 @@ class HorarioSalaExcepcional(models.Model):
     asignatura = models.CharField(max_length=255)
     tipo_hora = models.CharField(max_length=8, db_index=True)
 
-# Modelo para TNE (Tarjeta Nacional Estudiantil)
+# Modelo para usuarios DUOC (Tarjeta Nacional Estudiantil)
+class UsuarioTNE(models.Model):
+    rut = models.CharField("RUT", max_length=10, primary_key=True)
+    nombre = models.CharField("Nombre", max_length=60 ,null=True)
+    apellido = models.CharField("Apellido", max_length=60, null=True)
+    username = models.CharField(max_length=100, null=True, blank=True)
+    condicion= models.CharField(max_length=100, null=True, blank=True)
+    
+
+# Modelo para TNE (Tarjeta Nacional Estudiantil) ejemplo
 class TNE(models.Model):
-    nombre = models.CharField(max_length=255, db_index=True)
-    email = models.EmailField(db_index=True)
-    rut = models.CharField(max_length=12, db_index=True)
-    identificador_tarjeta = models.CharField(max_length=12, db_index=True)
-    sede = models.ForeignKey(Sede, on_delete=models.CASCADE)
-    estado = models.CharField(max_length=30,blank=True, null=True)  
-    temp_pass = models.CharField(max_length=30,blank=True, null=True)
-    def __str__(self):
-        return self.identificador_tarjeta
+    rut = models.CharField("RUT", max_length=10, unique=True, primary_key=True)
+    nombre = models.CharField("Nombre", max_length=60, null=True, blank=True)
+    apellido = models.CharField("Apellido", max_length=60, null=True, blank=True)
+    estado = models.BooleanField("Pendiente", default=True)
+    email = models.CharField(max_length=100, null=True, blank=True)
+    condicion = models.CharField(max_length=100, null=True, blank=True)
+    codigo = models.CharField(max_length=4, null=True, blank=True)
+    fecha_llegada = models.DateField("Fecha de Llegada", null=True, blank=True)
+    fecha_entrega = models.DateField("Fecha de Entrega", null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        # Si se asigna un código y no hay fecha de entrega, establecer la fecha actual
+        if self.codigo and not self.fecha_entrega:
+            self.fecha_entrega = timezone.now().date()
+        super(TNE, self).save(*args, **kwargs)
 
 # Modelo para Evento
 class Evento(models.Model):

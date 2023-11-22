@@ -1,18 +1,8 @@
-{% load static tailwind_tags %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión Salas</title>
-    {% tailwind_css %}
-</head>
-<body>
     <!-- tabla y filtro -->
     <div class="body w-full p-4 flex-1 bg-white">
         <h1 class="text-2xl mb-4 font-bold">Salas</h1>
         <div class="flex justify-between items-center mb-4">
-            <input type="text" id="busqueda" placeholder="Buscar..." class="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500">
+            <input type="text" id="busquedas" placeholder="Buscar..." class="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500">
             <button class="btnAgregarSala bg-blue hover:bg-yellow-500 text-black font-bold py-2 px-4 rounded">Agregar Sala</button>
         </div>
         <div class="h-screen w-full">
@@ -58,10 +48,10 @@
             <form id="editForm" action="" method="">
                 {% csrf_token %}
                 <!-- Campos del formulario -->
-                <label for="editNombre" class="block text-sm font-medium text-gray-700">Nombre:</label>
+                <label  class="block text-sm font-medium text-gray-700">Nombre:</label>
                 <input type="text" id="editNombre" name="editNombre" required class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm">
     
-                <label for="editCapacidad" class="block text-sm font-medium text-gray-700">Capacidad:</label>
+                <label  class="block text-sm font-medium text-gray-700">Capacidad:</label>
                 <input type="number" id="editCapacidad" name="editCapacidad" required class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm"></input>
 
                 <div class="flex justify-between">
@@ -81,10 +71,10 @@
                 {% csrf_token %}
                 <!-- Campos del formulario -->
                 <div>
-                    <label for="nombre" class="block text-sm font-medium text-gray-700">Nombre:</label>
+                    <label  class="block text-sm font-medium text-gray-700">Nombre:</label>
                     <input type="text" id="nombre" name="nombre" required class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm">
         
-                    <label for="capacidad" class="block text-sm font-medium text-gray-700">Cantidad Total:</label>
+                    <label  class="block text-sm font-medium text-gray-700">Cantidad Total:</label>
                     <input type="number" id="capacidad" name="capacidad" required class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm"></input>
         </div>
     
@@ -99,16 +89,16 @@
     </div>
 
     
-</body>
+<!-- </body> -->
 
 <!-- jquery -->
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 
 <!-- Script editar sala -->
 <script>
-    $(document).ready(function(){
+    // $(document).ready(function(){
     
-        $(".edit-button").on("click", function(){
+        $(".edit-button").on("click", function(e){
             var row = $(this).closest("tr");
             var id = row.data("id");  // Obtener el ID de la sala
 
@@ -155,7 +145,7 @@
                         $("#editModal").addClass("hidden");
                         $("#editForm")[0].reset();
                         $("#saveButton, #closeEditModal").prop("disabled", false);
-                        window.parent.postMessage('reloadIframes', '*');
+                        window.parent.postMessage('salas', '*');  
                     }
                     else if (data.error) {
                         alert(data.error);
@@ -179,18 +169,19 @@
                 return false;
             });
         });
-    });
+    // });
 </script>
 
 <!-- Script eliminar sala -->
 <script>
-    $(document).ready(function(){
-    $(".delete-button").on("click", function(){
+    // $(document).ready(function(){
+    $(".delete-button").on("click", function(e){
         var row = $(this).closest("tr");
-        var id = row.data("id");  // Obtener el ID de la sala
+        var id = row.data("id");  // Obtener el ID de la sala   
 
         // Confirmar la eliminación
         if (!confirm("¿Estás seguro de que quieres eliminar esta sala?")) {
+            e.stopImmediatePropagation();
             return;
         }
 
@@ -202,7 +193,7 @@
                 alert('Sala eliminada con éxito');
                 
                 // Enviar mensaje a la ventana principal.
-                window.parent.postMessage('reloadIframes', '*');    
+                window.parent.postMessage('salas', '*');    
             },
             error: function(jqXHR, textStatus, errorThrown) {
                 alert('Error al eliminar la sala: ' + errorThrown);
@@ -212,13 +203,13 @@
         e.stopImmediatePropagation();
         return false;
     });
-});
+// });
 
 </script>
 
 <!-- Script para abrir el modal de creación de sala -->
 <script>
-    $(document).ready(function () {
+    // $(document).ready(function () {
         $(".btnAgregarSala").click(function () {
             $("#modalAgregarSala").show();
         });
@@ -227,12 +218,12 @@
             $("#modalAgregarSala").hide();
             $("#AgregarSala")[0].reset();
         });
-    });
+    // });
 </script>
 
 <!-- Script para enviar el formulario de creación de producto -->
 <script>
-    $(document).ready(function () {
+    // $(document).ready(function () {
         $("#AgregarSala").submit(function (e) {
             e.preventDefault();
     
@@ -251,7 +242,7 @@
                     }
                     $("#modalAgregarSala").hide();
                     $("#AgregarSala")[0].reset();
-                    location.reload();
+                    window.parent.postMessage('salas', '*');  
                 },
                 error: function (jqXHR, textStatus, errorThrown) {
                     if(jqXHR.responseJSON.error){
@@ -265,13 +256,12 @@
             e.stopImmediatePropagation();
             return false;
         });
-    });    
+    // });    
 </script>
 
  <!-- filtro -->
 <script>
-    $(document).ready(function(){
-        $("#busqueda").on("keyup", function() {
+        $("#busquedas").on("keyup", function() {
             var value = $(this).val().toLowerCase();
             $("table tbody tr").filter(function() {
                 var nombre = $(this).find("td:nth-child(1)").text().toLowerCase();
@@ -282,7 +272,6 @@
                 )
             });
         });
-    });
 </script>
 
-</html>
+<!-- </html> -->

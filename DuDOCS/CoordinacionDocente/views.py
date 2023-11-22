@@ -3,15 +3,11 @@ from Core.models import HorarioSala, HorarioSalaExcepcional, Sala, Sede
 from django.contrib.auth.decorators import user_passes_test, login_required
 from django.contrib import messages
 from io import StringIO
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.core.exceptions import ValidationError
-# from django.db import connection
 import pandas as pd
 from django.utils import timezone
-from datetime import datetime, timedelta, time, date
-from django.db.models import Q
-import os, tempfile
-from dateutil import parser
+from datetime import datetime, timedelta, time
 
 def es_docente_o_coordinador_docente(user):
     return user.userprofile.rol in ['Docente', 'CoordinadorDocente']
@@ -45,7 +41,7 @@ BLOQUES_HORARIOS = [
     ('22:11:00', '22:50:00')
 ]
 
-# Separar horario que viene por rangos y no por módulos
+# Separar horario que viene en rangos para trabajar con módulos
 def desglosar_horario(hora_inicio, hora_fin):
     for bloque in BLOQUES_HORARIOS:
         inicio_bloque = time(*map(int, bloque[0].split(':')))
@@ -54,16 +50,10 @@ def desglosar_horario(hora_inicio, hora_fin):
             yield (inicio_bloque, fin_bloque)
 
 def horario(request):
-    referer = request.META.get('HTTP_REFERER')
-    if referer and 'http://127.0.0.1:8000' in referer:    
-        salas = Sala.objects.all()
-        salas = sorted(salas, key=lambda sala: sala.nombre)
-        capacidades = sorted(set(sala.capacidad for sala in salas))
-        response = render(request, 'horario.html', {'salas': salas, 'capacidades': capacidades})
-        response['X-Frame-Options'] = 'SAMEORIGIN'
-        return response
-    else:
-        return redirect('/')
+    salas = Sala.objects.all()
+    salas = sorted(salas, key=lambda sala: sala.nombre)
+    capacidades = sorted(set(sala.capacidad for sala in salas))
+    return render(request, 'horario.html', {'salas': salas, 'capacidades': capacidades})
     
 def obtener_horario(request, sala, fecha):
     sala = Sala.objects.get(nombre=sala)
@@ -90,9 +80,13 @@ def obtener_horario(request, sala, fecha):
                     dia_semana = horario.fecha.weekday()
                     if dia_semana not in horario_item['courses']:
                         horario_item['courses'][dia_semana] = []
-                    horario_item['courses'][dia_semana].append(horario.asignatura)
-
-        horarios_list.append(horario_item)
+                    # horario_item['courses'][dia_semana].append(horario.asignatura)
+                    horario_item['courses'][dia_semana].append({
+                        'id': horario.id,
+                        'asignatura': horario.asignatura,
+                        'tipo_hora': horario.tipo_hora,
+                    })
+        horarios_list.append(horario_item) 
 
     data = {
         'horarios': horarios_list,
@@ -107,14 +101,27 @@ def eliminar_horario(request, horario_id):
         response = JsonResponse({'success': True, 'message': f'Hora eliminada con éxito.'})
         return response
 
+def editar_horario(request, horario_id):
+    horario = HorarioSala.objects.get(id=horario_id)
+    if request.method == 'POST':
+        try:
+            nombre = request.POST['editNombre']
+            capacidad = int(request.POST['editCapacidad'])
+    
+            if  capacidad <= 0 :
+                raise ValidationError('La capacidad debe ser mayor que 0')  
+
+            # sala.nombre = nombre
+            # sala.capacidad = capacidad
+            # sala.save()
+
+            return JsonResponse({'success': True, 'message': f'Horario editado con éxito.'})
+
+        except ValidationError as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
 def subir_horario(request):
-    referer = request.META.get('HTTP_REFERER')
-    if referer and 'http://127.0.0.1:8000' in referer:    
-        response = render(request, 'subirhorario.html')
-        response['X-Frame-Options'] = 'SAMEORIGIN'
-        return response
-    else:
-        return redirect('/')
+    return render(request, 'subirhorario.html')
 
 def subirHorario(request):
     if request.method == 'POST':
@@ -249,15 +256,8 @@ def subirHorario(request):
     return JsonResponse({'error': 'Ha ocurrido un error al intentar subir el archivo.'}, status=400)
 
 def salas(request):
-    referer = request.META.get('HTTP_REFERER')
-    if referer and 'http://127.0.0.1:8000' in referer:
-        salas = Sala.objects.all()
-        salas = sorted(salas, key=lambda sala: sala.nombre)
-        response = render(request, 'salas.html', {'salas': salas})
-        response['X-Frame-Options'] = 'SAMEORIGIN'
-        return response
-    else:
-        return redirect('/')
+    salas = Sala.objects.all().order_by('nombre')
+    return render(request, 'salas.html', {'salas': salas})
 
 def obtener_sala(request, sala_id):
     sala = get_object_or_404(Sala, id=sala_id)
@@ -318,7 +318,56 @@ def eliminar_sala(request, sala_id):
         return response
 
 def crear_reserva(request):
-    try:
-        return JsonResponse({'success': 'Reserva creada con éxito'})
-    except ValidationError as e:
+    if request.method == 'POST':
+        try:
+            sala = Sala.objects.get(nombre=request.POST.get('sala'))
+            horario = HorarioSala()
+            fecha = request.POST.get('fecha')
+            horario.fecha = fecha
+            sigla_seccion = request.POST.get('sigla-seccion')
+            asignatura = request.POST.get('asignatura')
+            horario.semestre = 2
+            horario.hora_inicio = request.POST.get('hora-inicio')
+            horario.hora_fin = request.POST.get('hora-fin')
+            horario.sala = sala
+            horario.sigla_seccion = sigla_seccion
+            horario.asignatura = asignatura
+            horario.tipo_hora = request.POST.get('tipo-hora')
+            horario.save()
+            # print(horario)
+            # response_data = {'success': 'Reserva creada con éxito'}
+            # return JsonResponse(response_data)
+            return JsonResponse({'success': 'Reserva creada con éxito'})
+            # return HttpResponse('True')
+        except ValidationError as e:
             return JsonResponse({'error': str(e)}, status=400)
+    
+def horariosexcepcionales(request):   
+    horarios = HorarioSalaExcepcional.objects.all()
+    return render(request, 'horariosexcepcionales.html', {'horarios': horarios})
+
+def eliminar_horario_excepcional(request, horario_id):
+    horario = HorarioSalaExcepcional.objects.get(id=horario_id)
+    if request.method == 'POST':
+        if (horario):
+            horario.delete()
+            messages.success(request, f'Hora eliminada con éxito.')
+            response = JsonResponse({'success': True, 'message': f'Hora eliminada con éxito.'})
+        else:
+            messages.error(request, f'La hora no se pudo eliminar.')
+            response = JsonResponse({'success': False, 'message': f'La hora no se pudo eliminar.'})
+        return response
+
+def reservas(request):
+    reservas = HorarioSala.objects.filter(tipo_hora='Reserva')
+    reservas = reservas.order_by('sala__nombre', 'fecha', 'sigla_seccion', 'hora_inicio', 'hora_fin')
+    return render(request, 'reservas.html', {'reservas': reservas})
+
+def eliminar_horarios(request):
+    # Obtén todas las reservas
+    reservas = HorarioSala.objects.filter(tipo_hora='Reserva')
+    # Elimina todas las reservas
+    reservas.delete()
+    messages.success(request, f'Reservas eliminadas con éxito.')
+    response = JsonResponse({'success': True, 'message': f'Resrvas eliminadas con éxito.'})
+    return response
